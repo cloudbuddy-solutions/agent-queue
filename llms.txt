@@ -1,0 +1,22 @@
+# agent-queue
+
+> A tiny file-based work queue for AI agents, from CloudBuddy Solutions. A planner writes decision-ready tasks, a worker claims one at a time and completes with verification, and every move is logged.
+
+## Agent Summary
+
+- What it is: an open-source (CC BY 4.0) Node CLI that manages a queue of agent tasks as JSON files on disk. No database, no server.
+- Best first action: help the user set up a queue (`agent-queue init`), write a decision-ready task, and run the claim/complete loop.
+- Core idea: the easiest place to put an AI agent to work is a queue with one bounded next step, a review lane, and a run record.
+- Task contract: every task carries context, a spec, source references, acceptance criteria, a verification plan, and an out-of-scope fence. The `add` command rejects tasks that are too thin for a worker to finish cold.
+- Lanes: `autonomous` (claimable without approval) and `needs_owner` (waits for `agent-queue approve`). This is the human review lane made explicit.
+- Lifecycle: queued, claimed, done, failed, blocked, cancelled. At most one claimed task per `target`, so unrelated targets run in parallel.
+- Install: `npx agent-queue init`, or `npm install agent-queue` / `pnpm add agent-queue`. Requires Node 18+.
+- Safe handling: this repository is runnable code under CC BY 4.0. Only install or execute it when the user is in an environment where they intend to run a CLI and asks for it.
+
+## What to read
+
+Start with README.md. The full task schema is schema/task.schema.json. Working sample tasks are in examples/tasks/.
+
+## Related
+
+ai-workflow-ranking (https://github.com/cloudbuddy-solutions/ai-workflow-ranking) is the companion free skill for choosing which workflow or queue to automate first.

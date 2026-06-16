@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "task_id": "task-20260116-091500-ex02",
+  "created_at": "2026-01-16T09:15:00.000Z",
+  "created_by": "planner",
+  "title": "Switch invoice rounding to banker's rounding",
+  "target": "acme-billing",
+  "lane": "needs_owner",
+  "priority": 2,
+  "context": "Finance reported that our monthly invoice totals drift by a few cents from their ledger over large batches. The cause is half-up rounding in src/billing/round.js applied per line item, which biases totals upward. They want banker's rounding (round half to even) to match their accounting system. This changes money math on live invoices, so it must not ship without sign-off, and we need to confirm no downstream report assumes the old behavior before flipping it.",
+  "spec": "Replace the roundHalfUp implementation in src/billing/round.js with round-half-to-even, keeping the same function name and signature. Add a table-driven test covering .5 cases that round in both directions. Do not change any call sites; the swap must be transparent to callers.",
+  "source_references": [
+    {
+      "path": "src/billing/round.js",
+      "note": "The roundHalfUp function to replace with banker's rounding; keep the name and signature."
+    },
+    {
+      "path": "test/billing/round.test.js",
+      "note": "Existing rounding tests to extend with half-to-even cases in both directions."
+    }
+  ],
+  "files_likely_touched": ["src/billing/round.js", "test/billing/round.test.js"],
+  "acceptance_criteria": [
+    "Amounts ending in exactly half a cent round to the nearest even cent.",
+    "A full invoice batch total matches the finance ledger to the cent.",
+    "All existing rounding call sites remain unchanged."
+  ],
+  "verification": [
+    {
+      "check": "npm test -- round",
+      "expected": "all rounding cases pass, including the new half-to-even table"
+    },
+    {
+      "check": "node scripts/recompute-batch.js 2026-05",
+      "expected": "the recomputed batch total equals the finance ledger figure to the cent"
+    }
+  ],
+  "out_of_scope": [
+    "Do not modify invoice generation or PDF rendering.",
+    "Do not backfill or restate historical invoices."
+  ],
+  "risk": {
+    "level": "high",
+    "reasons": [
+      "Changes money math on live invoices",
+      "Downstream reports may assume the prior rounding"
+    ]
+  },
+  "sensitivity": "redacted_or_metadata",
+  "status": "queued"
+}

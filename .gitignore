@@ -1,0 +1,4 @@
+node_modules/
+.agent-queue/
+*.log
+.DS_Store

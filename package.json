@@ -1,0 +1,47 @@
+{
+  "name": "agent-queue",
+  "version": "0.1.0",
+  "description": "A tiny file-based work queue for AI agents. A planner writes decision-ready tasks, a worker claims one at a time and completes with verification, and every move is logged.",
+  "type": "module",
+  "bin": {
+    "agent-queue": "bin/agent-queue.mjs"
+  },
+  "files": [
+    "bin",
+    "schema",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "agent",
+    "queue",
+    "task-queue",
+    "backlog",
+    "workflow",
+    "orchestration",
+    "llm",
+    "claude",
+    "codex"
+  ],
+  "license": "CC-BY-4.0",
+  "author": "CloudBuddy Solutions",
+  "homepage": "https://github.com/cloudbuddy-solutions/agent-queue#readme",
+  "bugs": {
+    "url": "https://github.com/cloudbuddy-solutions/agent-queue/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cloudbuddy-solutions/agent-queue.git"
+  }
+}

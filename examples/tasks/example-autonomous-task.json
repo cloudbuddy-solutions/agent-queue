@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "task_id": "task-20260116-090000-ex01",
+  "created_at": "2026-01-16T09:00:00.000Z",
+  "created_by": "planner",
+  "title": "Add backoff retry to the inventory client",
+  "target": "acme-api",
+  "lane": "autonomous",
+  "priority": 2,
+  "context": "The nightly order-sync job intermittently fails when the upstream inventory API returns a 503 under load. We confirmed it is transient: retrying the same request by hand succeeds within a second. The client in src/clients/inventory.js does a single fetch with no retry, so one 503 fails the whole sync and pages on-call. The codebase already has a backoff helper at src/lib/backoff.js used by the payments client; follow that pattern rather than adding a dependency. No caching layer is involved.",
+  "spec": "Wrap the inventory fetch in src/clients/inventory.js with the existing withBackoff helper from src/lib/backoff.js: 3 attempts, exponential delay starting at 200ms, retry only on network errors and HTTP 502, 503, and 504. Leave the getInventory() signature unchanged so callers need no edits.",
+  "source_references": [
+    {
+      "path": "src/clients/inventory.js",
+      "note": "The single fetch call inside getInventory() that needs the retry wrapper."
+    },
+    {
+      "path": "src/lib/backoff.js",
+      "note": "Existing withBackoff helper to reuse; mirror how src/clients/payments.js calls it."
+    }
+  ],
+  "files_likely_touched": ["src/clients/inventory.js"],
+  "acceptance_criteria": [
+    "A 503 from the inventory API is retried up to 3 times before the job fails.",
+    "A successful retry leaves no error in the nightly sync log.",
+    "The getInventory() signature is unchanged and existing callers are untouched."
+  ],
+  "verification": [
+    {
+      "check": "npm test",
+      "expected": "all tests pass, including a new retries-on-503 case for the inventory client"
+    },
+    {
+      "check": "node scripts/sim-503.js",
+      "expected": "the job completes after two simulated 503s with no thrown error"
+    }
+  ],
+  "out_of_scope": [
+    "Do not change the payments client.",
+    "Do not add a caching layer or a new HTTP dependency."
+  ],
+  "risk": {
+    "level": "low",
+    "reasons": [
+      "Isolated to one client function",
+      "Covered by an added test"
+    ]
+  },
+  "sensitivity": "public",
+  "status": "queued"
+}

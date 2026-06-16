@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cloudbuddy.dev/schemas/agent-queue-task.schema.json",
+  "title": "Agent Queue Task",
+  "description": "A decision-ready unit of work written by a planner for a worker agent. A task is not queueable unless it carries context, a spec, acceptance criteria, a verification plan, and scope boundaries. The schema is deliberately opinionated toward agent handoff; swap it via agent-queue.config.json if your work has a different shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task_id",
+    "created_at",
+    "created_by",
+    "title",
+    "lane",
+    "priority",
+    "context",
+    "spec",
+    "source_references",
+    "acceptance_criteria",
+    "verification",
+    "out_of_scope",
+    "risk",
+    "sensitivity",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^task-[0-9]{8}-[0-9]{6}-[a-z0-9]{4}$"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "created_by": {
+      "description": "Planner identity.",
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "description": "Optional label for the thing this task operates on: a project, repo, dataset, or lane. Tasks that share a target are claimed one-at-a-time so unrelated targets run in parallel. Omit it for no concurrency limit.",
+      "type": "string",
+      "minLength": 1
+    },
+    "lane": {
+      "description": "autonomous: a worker may claim without approval. needs_owner: requires owner_approval.approved before claim.",
+      "enum": ["autonomous", "needs_owner"]
+    },
+    "owner_approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved"],
+      "properties": {
+        "approved": { "type": "boolean" },
+        "approved_by": { "type": "string" },
+        "approved_at": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    },
+    "priority": {
+      "description": "1 = do first, 3 = do when idle.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "context": {
+      "description": "The handoff brief. The worker starts cold: cover why this task exists, what is already known (current behavior, root cause if diagnosed, what was tried or ruled out), relevant conventions or constraints, and any gotchas. A competent worker with zero prior context should be able to start without asking a question.",
+      "type": "string",
+      "minLength": 200
+    },
+    "spec": {
+      "description": "What to do, concretely: the change in plain language, including where it goes and what pattern to follow.",
+      "type": "string",
+      "minLength": 120
+    },
+    "source_references": {
+      "description": "References that ground the task: where the change happens, where the pattern to follow lives, where the problem shows up. These replace the worker's discovery pass. For code this is file/line refs; for other work it can be a document, dataset, or URL plus a substantive note.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "note"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "note": { "type": "string", "minLength": 20 }
+        }
+      }
+    },
+    "setup_notes": {
+      "description": "How to get set up for this task when non-obvious: install/build/run commands, ports, env vars, profile names (never secret values).",
+      "type": "string"
+    },
+    "acceptance_criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 15 }
+    },
+    "verification": {
+      "description": "Proof plan. Each entry is an exact command (or concrete manual check) the worker must run and the specific expected outcome - not 'works' or 'passes'.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "expected"],
+        "properties": {
+          "check": { "type": "string", "minLength": 8 },
+          "expected": { "type": "string", "minLength": 12 }
+        }
+      }
+    },
+    "files_likely_touched": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "out_of_scope": {
+      "description": "Explicit non-goals. Workers must not expand scope past this line; new findings become follow_ups, not extra work. At least one entry - every task has an adjacent thing it should NOT touch.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["level", "reasons"],
+      "properties": {
+        "level": { "enum": ["low", "medium", "high"] },
+        "reasons": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "sensitivity": {
+      "enum": ["public", "redacted_or_metadata", "private_metadata"]
+    },
+    "status": {
+      "enum": ["queued", "claimed", "done", "failed", "blocked", "cancelled"]
+    },
+    "claimed_by": { "type": "string" },
+    "claimed_at": { "type": "string" },
+    "blocked_reason": { "type": "string" },
+    "failed_reason": { "type": "string" },
+    "cancelled_reason": { "type": "string" },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completed_at", "summary", "verification_evidence"],
+      "properties": {
+        "completed_at": { "type": "string" },
+        "summary": { "type": "string", "minLength": 1 },
+        "verification_evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["check", "outcome"],
+            "properties": {
+              "check": { "type": "string" },
+              "outcome": { "type": "string" }
+            }
+          }
+        },
+        "files_changed": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "commits": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "follow_ups": {
+          "description": "Out-of-scope findings the worker surfaced instead of acting on. The planner triages these into new tasks.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
