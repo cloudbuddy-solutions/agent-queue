@@ -47,7 +47,9 @@ If a worker agent should claim and complete tasks on its own, tell it to call `a
 # 1. Create a queue in the current directory (writes ./.agent-queue and a config file)
 npx agent-queue init
 
-# 2. Add a task (see examples/ for the shape)
+# 2. Add a task. Write your own from the template in
+#    skills/agent-queue/reference/task-template.md, or try a bundled sample.
+#    (Samples ship with the package under its examples/ folder, and are in the repo.)
 npx agent-queue add --file examples/tasks/example-autonomous-task.json
 
 # 3. A worker claims the next eligible task

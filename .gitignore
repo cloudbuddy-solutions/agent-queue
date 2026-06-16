@@ -1,4 +1,5 @@
 node_modules/
 .agent-queue/
+agent-queue.config.json
 *.log
 .DS_Store
