@@ -20,6 +20,7 @@
 //   agent-queue release <task-id>                               claimed/blocked -> queued
 //   agent-queue cancel <task-id> --reason "..."
 //   agent-queue approve <task-id> [--by owner] [--note "..."]
+//   agent-queue pending                                        list everything waiting on a person
 //   agent-queue status
 //   agent-queue archive [<task-id>] [--days 14]                 move terminal tasks to archive/YYYY-MM/
 //
@@ -484,6 +485,38 @@ try {
       if (blocked.length > 0) {
         console.log("Blocked:");
         for (const task of blocked) console.log(`  ${shortLine(task)} | ${task.blocked_reason}`);
+      }
+      break;
+    }
+
+    case "pending": {
+      // The human's inbox: everything that cannot move without a person.
+      const byPriority = (a, b) => a.priority - b.priority || a.created_at.localeCompare(b.created_at);
+      const tasks = await loadTasks(cfg);
+      const awaiting = tasks
+        .filter((t) => t.lane === "needs_owner" && t.status === "queued" && t.owner_approval?.approved !== true)
+        .sort(byPriority);
+      const blocked = tasks.filter((t) => t.status === "blocked").sort(byPriority);
+      if (awaiting.length === 0 && blocked.length === 0) {
+        console.log("Nothing needs a person right now.");
+        break;
+      }
+      const fileOf = (task) => path.relative(cfg.cwd, path.join(cfg.tasksDir, `${task.task_id}.json`));
+      if (awaiting.length > 0) {
+        console.log(`Awaiting approval (${awaiting.length}):`);
+        for (const task of awaiting) {
+          console.log(`  ${shortLine(task)}`);
+          console.log(`    approve: agent-queue approve ${task.task_id}`);
+          console.log(`    file:    ${fileOf(task)}`);
+        }
+      }
+      if (blocked.length > 0) {
+        console.log(`Blocked, needs intervention (${blocked.length}):`);
+        for (const task of blocked) {
+          console.log(`  ${shortLine(task)}${task.blocked_reason ? ` | ${task.blocked_reason}` : ""}`);
+          console.log(`    release: agent-queue release ${task.task_id}`);
+          console.log(`    file:    ${fileOf(task)}`);
+        }
       }
       break;
     }

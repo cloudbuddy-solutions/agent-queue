@@ -103,6 +103,14 @@ queued ──claim──> claimed ──complete──> done
 
 The split is the human review lane, made explicit. The agent handles the routine pass; a person keeps the calls that need judgment.
 
+To see everything waiting on you in one list, run:
+
+```bash
+agent-queue pending
+```
+
+It prints the `needs_owner` tasks awaiting approval and any `blocked` tasks, each with the exact `approve` or `release` command and the path to the task file, so the human's queue is one word away.
+
 ## Commands
 
 | Command | What it does |
@@ -119,6 +127,7 @@ The split is the human review lane, made explicit. The agent handles the routine
 | `release <task-id>` | Return a claimed or blocked task to queued |
 | `cancel <task-id> --reason ...` | Cancel a non-terminal task |
 | `approve <task-id> [--by owner]` | Approve a `needs_owner` task |
+| `pending` | The human's inbox: everything waiting on a person, with the next command for each |
 | `status` | Counts, plus what is awaiting approval or blocked |
 | `archive [<task-id>] [--days 14]` | Move terminal tasks to the archive |
 

@@ -86,6 +86,30 @@ try {
 
   assert.match(run(["status"]), /done: 1/, "status shows one done task");
 
+  // pending: the human inbox surfaces awaiting-approval and blocked work
+  const ownerTask = structuredClone(validTask);
+  ownerTask.task_id = "task-20260116-092000-cc03";
+  ownerTask.lane = "needs_owner";
+  ownerTask.target = "billing";
+  writeFileSync(path.join(tmp, "owner.json"), JSON.stringify(ownerTask));
+  run(["add", "--file", path.join(tmp, "owner.json")]);
+
+  const blockTask = structuredClone(validTask);
+  blockTask.task_id = "task-20260116-092100-dd04";
+  blockTask.target = "demo2";
+  writeFileSync(path.join(tmp, "block.json"), JSON.stringify(blockTask));
+  run(["add", "--file", path.join(tmp, "block.json")]);
+  run(["claim", blockTask.task_id, "--by", "worker"]);
+  run(["block", blockTask.task_id, "--reason", "waiting on access"]);
+
+  const pending = run(["pending"]);
+  assert.match(pending, /Awaiting approval \(1\)/, "pending shows awaiting approval");
+  assert.match(pending, new RegExp(ownerTask.task_id), "pending lists the needs_owner task");
+  assert.match(pending, /agent-queue approve/, "pending gives the approve command");
+  assert.match(pending, /Blocked, needs intervention \(1\)/, "pending shows blocked work");
+  assert.match(pending, new RegExp(blockTask.task_id), "pending lists the blocked task");
+  assert.match(pending, /agent-queue release/, "pending gives the release command");
+
   console.log("smoke test passed");
 } finally {
   rmSync(tmp, { recursive: true, force: true });

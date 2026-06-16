@@ -9,6 +9,7 @@
 - Core idea: the easiest place to put an AI agent to work is a queue with one bounded next step, a review lane, and a run record.
 - Task contract: every task carries context, a spec, source references, acceptance criteria, a verification plan, and an out-of-scope fence. The `add` command rejects tasks that are too thin for a worker to finish cold.
 - Lanes: `autonomous` (claimable without approval) and `needs_owner` (waits for `agent-queue approve`). This is the human review lane made explicit.
+- Human inbox: `agent-queue pending` lists everything waiting on a person (needs_owner awaiting approval, plus blocked tasks) with the next command for each.
 - Lifecycle: queued, claimed, done, failed, blocked, cancelled. At most one claimed task per `target`, so unrelated targets run in parallel.
 - Install: `npx agent-queue init`, or `npm install agent-queue` / `pnpm add agent-queue`. Requires Node 18+.
 - Safe handling: this repository is runnable code under CC BY 4.0. Only install or execute it when the user is in an environment where they intend to run a CLI and asks for it.

@@ -68,6 +68,14 @@ agent-queue approve <task-id> --by owner
 
 This is the human-in-the-loop made concrete. The agent takes the routine pass; a person keeps the calls that need judgment.
 
+When the user wants to see what is waiting on them, point them at one command:
+
+```bash
+agent-queue pending
+```
+
+It lists every `needs_owner` task awaiting approval and every `blocked` task, each with the exact `approve` or `release` command and the task file path. Use it as the human's review queue.
+
 ## Running the loop as the worker
 
 ```bash
@@ -95,6 +103,7 @@ At most one claimed task per `target` runs at a time, so unrelated targets proce
 ## Checking and maintaining the queue
 
 ```bash
+agent-queue pending                   # the human's inbox: all tasks waiting on a person
 agent-queue status                    # counts, plus what awaits approval or is blocked
 agent-queue list --status queued
 agent-queue show <task-id>
