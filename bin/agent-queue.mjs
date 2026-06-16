@@ -33,7 +33,6 @@ import { readFile, writeFile, mkdir, readdir, rename, appendFile } from "node:fs
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import Ajv2020 from "ajv/dist/2020.js";
 
 const pkgDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const bundledSchemaPath = path.join(pkgDir, "schema", "task.schema.json");
@@ -109,10 +108,86 @@ async function ensureDirs(cfg) {
   await mkdir(cfg.archiveDir, { recursive: true });
 }
 
+// Minimal JSON Schema validator covering only the keywords task.schema.json
+// uses (type, required, properties, additionalProperties:false, const, enum,
+// pattern, minLength, minimum, maximum, minItems, items). Keeping this built in
+// means the tool has zero dependencies: nothing to install, one file to run.
+function compileValidator(schema) {
+  const typeOk = (t, v) => {
+    switch (t) {
+      case "object": return v !== null && typeof v === "object" && !Array.isArray(v);
+      case "array": return Array.isArray(v);
+      case "string": return typeof v === "string";
+      case "integer": return Number.isInteger(v);
+      case "number": return typeof v === "number";
+      case "boolean": return typeof v === "boolean";
+      default: return true;
+    }
+  };
+  function check(node, data, at, errors) {
+    if (!node || typeof node !== "object") return;
+    if ("const" in node && data !== node.const) {
+      errors.push({ instancePath: at, message: `must be equal to ${JSON.stringify(node.const)}` });
+      return;
+    }
+    if (node.enum && !node.enum.includes(data)) {
+      errors.push({ instancePath: at, message: "must be equal to one of the allowed values" });
+      return;
+    }
+    if (node.type && !typeOk(node.type, data)) {
+      errors.push({ instancePath: at, message: `must be ${node.type}` });
+      return;
+    }
+    if (node.type === "string") {
+      if (typeof node.minLength === "number" && data.length < node.minLength) {
+        errors.push({ instancePath: at, message: `must NOT have fewer than ${node.minLength} characters` });
+      }
+      if (node.pattern && !new RegExp(node.pattern).test(data)) {
+        errors.push({ instancePath: at, message: `must match pattern "${node.pattern}"` });
+      }
+    }
+    if (node.type === "integer" || node.type === "number") {
+      if (typeof node.minimum === "number" && data < node.minimum) {
+        errors.push({ instancePath: at, message: `must be >= ${node.minimum}` });
+      }
+      if (typeof node.maximum === "number" && data > node.maximum) {
+        errors.push({ instancePath: at, message: `must be <= ${node.maximum}` });
+      }
+    }
+    if (node.type === "array" && Array.isArray(data)) {
+      if (typeof node.minItems === "number" && data.length < node.minItems) {
+        errors.push({ instancePath: at, message: `must NOT have fewer than ${node.minItems} items` });
+      }
+      if (node.items) data.forEach((item, i) => check(node.items, item, `${at}/${i}`, errors));
+    }
+    if (node.type === "object" && typeOk("object", data)) {
+      for (const key of node.required ?? []) {
+        if (!(key in data)) errors.push({ instancePath: at, message: `must have required property '${key}'` });
+      }
+      if (node.additionalProperties === false && node.properties) {
+        for (const key of Object.keys(data)) {
+          if (!(key in node.properties)) errors.push({ instancePath: `${at}/${key}`, message: "must NOT have additional properties" });
+        }
+      }
+      if (node.properties) {
+        for (const [key, sub] of Object.entries(node.properties)) {
+          if (key in data) check(sub, data[key], `${at}/${key}`, errors);
+        }
+      }
+    }
+  }
+  const validate = (data) => {
+    const errors = [];
+    check(schema, data, "", errors);
+    validate.errors = errors;
+    return errors.length === 0;
+  };
+  return validate;
+}
+
 async function getValidator(cfg) {
   const schema = JSON.parse(await readFile(cfg.schemaPath, "utf8"));
-  const ajv = new Ajv2020({ allErrors: true });
-  return ajv.compile(schema);
+  return compileValidator(schema);
 }
 
 async function loadTasks(cfg) {

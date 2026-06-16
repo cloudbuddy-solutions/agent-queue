@@ -20,9 +20,6 @@
   "scripts": {
     "test": "node test/smoke.mjs"
   },
-  "dependencies": {
-    "ajv": "^8.17.1"
-  },
   "keywords": [
     "ai",
     "agents",
